@@ -78,7 +78,7 @@ GPT-5.6 Sol Proへ確認したい質問。
 実行:
 
 ```bash
-oracle \
+npx -y @steipete/oracle \
   --engine browser \
   --browser-manual-login \
   --browser-model-strategy current \
