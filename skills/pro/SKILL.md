@@ -81,6 +81,9 @@ GPT-5.6 Sol Proへ確認したい質問。
 npx -y @steipete/oracle \
   --engine browser \
   --browser-manual-login \
+  --browser-port 19194 \
+  --browser-reuse-wait 3s \
+  --browser-keep-browser \
   --browser-model-strategy current \
   --browser-timeout 20m \
   --browser-auto-reattach-delay 5s \
