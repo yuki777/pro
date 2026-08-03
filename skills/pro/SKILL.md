@@ -1,11 +1,11 @@
 ---
 name: pro
-description: Consult GPT-5.6 Sol + Pro through Oracle browser mode as an independent senior architect and reviewer. Use only when the user explicitly invokes pro with requests such as "proに相談して", "proに聞いて", "proに確認して", or "proにレビューしてもらって". Do not trigger for ordinary reviews, design discussions, or second-opinion requests that do not explicitly name pro.
+description: Consult GPT-5.6 Sol + Pro through Oracle browser mode as an independent senior researcher, architect, and reviewer. Use only when the user explicitly invokes pro with requests such as "proに相談して", "proに調査してもらって", "proに聞いて", "proに確認して", or "proにレビューしてもらって". Do not trigger for ordinary research, reviews, design discussions, or second-opinion requests that do not explicitly name pro.
 ---
 
 # Pro Consultation
 
-GPT-5.6 Sol + Proへ、設計、技術判断、リスクについて独立したセカンドオピニオンを依頼する。
+GPT-5.6 Sol + Proへ、技術調査、設計、技術判断、リスクについて独立した調査結果とセカンドオピニオンを依頼する。
 
 Proを実装者として扱わない。実装、ファイル変更、外部への投稿、最終判断は現在のエージェントが担当する。
 
@@ -44,14 +44,14 @@ Proを実装者として扱わない。実装、ファイル変更、外部へ�
 
 # Decision Needed
 
-Proに判断またはレビューしてほしい論点。
+Proに調査、判断またはレビューしてほしい論点。
 
 # Questions
 
 Proに答えてほしい具体的な質問。
 ```
 
-判断に必要な場合だけ、関係するコードやdiffの最小範囲、エラーの該当部分、依存する仕様、比較に必要な数値を含める。
+調査または判断に必要な場合だけ、関係するコードやdiffの最小範囲、エラーの該当部分、依存する仕様、比較に必要な数値を含める。
 
 次の情報は除外する。
 
@@ -64,16 +64,19 @@ Proに答えてほしい具体的な質問。
 
 ## Phase 2: Preflight
 
-自動ダウンロードされる未固定コードを実行しない。ローカルにインストール済みのOracleと必要なbrowserオプションを確認する。
+固定版Oracleを`npx`でダウンロードして実行し、必要なbrowserオプションを確認する。
 
 ```bash
-command -v oracle
-oracle --version
-oracle --debug-help | rg -- '--browser-chrome-path|--browser-manual-login|--browser-keep-browser'
-oracle --help --verbose | rg -- '--browser-model-strategy'
+command -v node
+node --version
+node -e 'if (Number(process.versions.node.split(".")[0]) < 24) { console.error("Node.js 24 or later is required"); process.exit(1); }'
+command -v npx
+npx -y @steipete/oracle@0.17.0 --version
+npx -y @steipete/oracle@0.17.0 --debug-help | rg -- '--browser-chrome-path|--browser-manual-login|--browser-keep-browser'
+npx -y @steipete/oracle@0.17.0 --help --verbose | rg -- '--browser-model-strategy'
 ```
 
-Oracleが存在しない、または必要なオプションがない場合は実行を止める。`npx -y`で自動インストール・更新せず、未実施であることを報告する。
+Node.jsが24未満、`npx`が存在しない、Oracleの起動に失敗する、または必要なオプションがない場合は実行を止める。未固定のlatestへ変更せず、未実施であることを報告する。
 
 macOSではGoogle Chromeを明示的に使用する。まず次の実行ファイルが存在することを確認する。
 
@@ -100,18 +103,18 @@ Oracle用Chromeが未起動または未ログインの場合だけ、Phase 3の�
 Phase 1の相談内容を、次の固定指示に続けて1つのプロンプトとして渡す。
 
 ```text
-あなたは独立したシニアアーキテクト・技術レビュアーです。
-実装者として作業せず、提示された判断材料を批判的にレビューしてください。
+あなたは独立したシニアリサーチャー・アーキテクト・技術レビュアーです。
+実装者として作業せず、提示された調査、判断、レビュー課題へ批判的に取り組んでください。
 
 次の観点を確認してください。
 
-1. 前提条件の誤りや未確認事項
-2. 見落としているリスクと運用影響
-3. 現在案を採用しない方がよい理由
+1. 確認できる事実と根拠、推論、未確認事項の区別
+2. 前提条件の誤りや不足情報
+3. 見落としているリスクと運用影響
 4. より良い代替案とトレードオフ
-5. 最終的な推奨判断とその根拠
+5. 最終的な調査結果または推奨判断とその根拠
 
-情報が不足して断定できない場合は、不足情報と条件分岐を明示してください。
+外部情報を調査した場合は出典を示してください。情報が不足して断定できない場合や外部情報へアクセスできない場合は、不足情報、条件分岐、未確認範囲を明示してください。
 
 <PHASE_1_CONSULTATION>
 ```
@@ -131,7 +134,7 @@ env -u OPENAI_API_KEY \
   -u GEMINI_API_KEY \
   -u XAI_API_KEY \
   -u CODEX_API_KEY \
-  oracle \
+  npx -y @steipete/oracle@0.17.0 \
     --engine browser \
     --browser-manual-login \
     --browser-chrome-path "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
@@ -153,7 +156,7 @@ ChatGPTに `Pro thinking` や `Answer now` が表示されても、`Answer now`�
 タイムアウト、不完全取得、接続断が発生した場合は、同じ相談を再実行しない。セッションIDまたはslugを使って既存セッションへreattachする。
 
 ```bash
-oracle session <SESSION_ID_OR_SLUG> --render
+npx -y @steipete/oracle@0.17.0 session <SESSION_ID_OR_SLUG> --render
 ```
 
 Oracleが利用できない場合もAPI modeやResponses APIへフォールバックしない。
@@ -163,7 +166,7 @@ Oracleが利用できない場合もAPI modeやResponses APIへフォールバ�
 回答取得後に対象セッションを確認する。
 
 ```bash
-oracle status
+npx -y @steipete/oracle@0.17.0 status
 ```
 
 セッションメタデータを確認する。
@@ -195,7 +198,7 @@ ChatGPTサーバー内部で実行されたモデルのattestationは取得で�
 
 ## Phase 5: Response
 
-Proの回答をそのまま転送せず、実際のコンテキストと根拠に照らして整理する。
+Proの調査結果や回答をそのまま転送せず、実際のコンテキストと根拠に照らして整理する。
 
 ```text
 ## 実行確認
@@ -208,9 +211,9 @@ Oracleセッション: <status> / <mode>
 Oracleモデル検証: <verifiedの値>
 サーバー側attestation: 取得不可
 
-## Proの回答
+## Proの調査・回答
 
-回答の要点と結論。
+調査結果、回答の要点と結論。
 
 ## 重要な指摘
 

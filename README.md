@@ -1,12 +1,12 @@
 # pro
 
-CodexからGPT-5.6 Sol + Proへ、設計や技術判断のセカンドオピニオンを依頼するためのSkillです。OpenAI APIではなく、[Oracle](https://github.com/steipete/oracle)のbrowser modeとChatGPT subscriptionを使用します。
+AIエージェントからGPT-5.6 Sol + Proへ、技術調査、設計判断、レビューを依頼するためのSkillです。OpenAI APIではなく、[Oracle](https://github.com/steipete/oracle)のbrowser modeとChatGPT subscriptionを使用します。
 
-このSkillは、ユーザーが「proに相談して」「proにレビューしてもらって」のように明示した場合だけ起動します。Proは独立したシニアアーキテクト・レビュアーとして意見を返し、実装と最終判断はCodexが担当します。
+このSkillは、ユーザーが「proに相談して」「proに調査してもらって」「proにレビューしてもらって」のように明示した場合だけ起動します。Proは独立したシニアリサーチャー・アーキテクト・技術レビュアーとして調査結果や意見を返し、実装と最終判断は呼び出し元のAIエージェントが担当します。
 
 ## 背景
 
-難しい設計判断では、実装を担当しているエージェントとは独立した視点が役立ちます。一方、ブラウザ経由でProへ相談する処理には、次の問題があります。
+難しい調査や設計判断では、実装を担当しているエージェントとは独立した視点が役立ちます。一方、ブラウザ経由でProへ相談する処理には、次の問題があります。
 
 - 会話やリポジトリ全体を送ると、無関係な情報や秘密情報まで共有するおそれがある
 - CLIのモデル指定だけでは、ChatGPT UIでGPT-5.6 SolとProが選ばれていることを保証できない
@@ -23,16 +23,16 @@ CodexからGPT-5.6 Sol + Proへ、設計や技術判断のセカンドオピニ�
 - **通常版Google Chromeを固定する**: Chrome Canaryなどへ自動で切り替えない
 - **モデル選択を誤認しない**: 送信直前にChatGPT UIで`GPT-5.6 Sol`と`Pro`の両方を確認する
 - **未完了を成功扱いしない**: Oracleの最終回答とセッション情報を確認できた場合だけ相談結果として報告する
-- **判断責任を分離する**: Proはレビューに専念し、Codexが事実確認、実装、最終判断を行う
+- **判断責任を分離する**: Proは調査、助言、レビューを担当し、AIエージェントが事実確認、実装、最終判断を行う
 
 ## 処理フロー
 
-1. Codexが現在の状況から、判断に必要な情報だけを9項目へ整理する
+1. AIエージェントが現在の状況から、調査や判断に必要な情報だけを9項目へ整理する
 2. Oracle、必要なbrowserオプション、Google Chromeの実行ファイルを確認する
 3. Oracle用Chromeで`GPT-5.6 Sol`と`Pro`の選択を目視確認する
 4. APIキーを子プロセスから外し、Oracleのbrowser modeで相談する
 5. セッション完了、browser mode、Chromeパス、ChatGPTの会話URLを確認する
-6. Proの回答を現在の根拠と比較し、採用判断と具体的な次の対応をCodexがまとめる
+6. Proの回答を現在の根拠と比較し、採用判断と具体的な次の対応をAIエージェントがまとめる
 
 詳細な手順と停止条件は[`skills/pro/SKILL.md`](skills/pro/SKILL.md)にあります。
 
@@ -40,52 +40,58 @@ CodexからGPT-5.6 Sol + Proへ、設計や技術判断のセカンドオピニ�
 
 | 依存 | 要件 |
 | --- | --- |
-| Codex | Skillsを利用できる環境 |
+| AIエージェント | Agent Skillsを利用でき、`gh skill`が対応している環境 |
 | OS | macOS |
 | Google Chrome | `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`にインストール済み |
 | ChatGPT | GPT-5.6 SolとProを利用できるsubscription、およびOracle用Chromeでのログイン |
-| Oracle | ローカルへ事前にインストール済みで、必要なbrowserオプションを提供するCLI |
+| GitHub CLI | `gh skill`を利用できるバージョン |
+| Node.js | 24以上で、`npx`を利用できる環境 |
+| Oracle | `npx -y @steipete/oracle@0.17.0`で取得・実行 |
 | CLI | `rg`と`jq` |
-| 開発時のみ | validatorを実行するための`uv` |
 
-Oracle 0.16.1で動作を確認しています。バージョン番号だけを信用せず、利用中のOracleが必要なオプションを持つことをpreflightで確認します。Oracleの導入方法は[公式リポジトリ](https://github.com/steipete/oracle)を参照してください。このSkill自身は`npx -y`などによる未固定コードの自動ダウンロードを行いません。
+Oracleは、検証済みの0.17.0を`npx`で必要時にダウンロードして実行します。再現性を保つためバージョンを固定し、preflightで必要なbrowserオプションを確認します。
 
 OpenAI APIキーは不要です。実行時には、主要なAI providerのAPIキー環境変数をOracleの子プロセスから外します。
 
 ## インストール
 
-リポジトリをcloneし、SkillディレクトリをCodexのSkillsディレクトリへリンクします。
+GitHub CLIで、利用するAIエージェントのユーザースコープへインストールします。
 
 ```bash
-git clone https://github.com/yuki777/pro.git
-mkdir -p ~/.codex/skills
-ln -s "$PWD/pro/skills/pro" ~/.codex/skills/pro
+gh skill install yuki777/pro pro --scope user
 ```
 
-`CODEX_HOME`を設定している場合は、`~/.codex/skills`を`$CODEX_HOME/skills`へ読み替えてください。同名のSkillがすでに存在する場合は、内容とリンク先を確認してから置き換えてください。
+対話中にインストール先のAIエージェントを選択します。非対話で実行する場合は、`--agent claude-code`、`--agent codex`、`--agent gemini-cli`、`--agent pi`などを追加してください。利用可能な値は`gh skill install --help`で確認できます。
 
-インストール後、Codexを新しいセッションで起動し、Skill一覧に`pro`が表示されることを確認します。
+インストール後、AIエージェントを新しいセッションで起動し、Skill一覧に`pro`が表示されることを確認します。
 
 ## 事前確認
 
 初回利用前に、OracleとGoogle Chromeを確認します。
 
 ```bash
-command -v oracle
-oracle --version
-oracle --debug-help | rg -- '--browser-chrome-path|--browser-manual-login|--browser-keep-browser'
-oracle --help --verbose | rg -- '--browser-model-strategy'
+command -v node
+node --version
+node -e 'if (Number(process.versions.node.split(".")[0]) < 24) { console.error("Node.js 24 or later is required"); process.exit(1); }'
+command -v npx
+npx -y @steipete/oracle@0.17.0 --version
+npx -y @steipete/oracle@0.17.0 --debug-help | rg -- '--browser-chrome-path|--browser-manual-login|--browser-keep-browser'
+npx -y @steipete/oracle@0.17.0 --help --verbose | rg -- '--browser-model-strategy'
 test -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 ```
 
-Oracle用ChromeでChatGPTへログインしていない場合は、初回実行時に短い接続確認が行われます。開いたGoogle Chromeで手動ログインし、そのブラウザを閉じずに再利用してください。
+初回のpreflightでは、固定版Oracleが`npx`でダウンロードされます。Oracle用ChromeでChatGPTへログインしていない場合は、初回実行時に短い接続確認が行われます。開いたGoogle Chromeで手動ログインし、そのブラウザを閉じずに再利用してください。
 
 ## 使い方
 
-Codexへ、`pro`を含む依頼を明示的に送ります。
+AIエージェントへ、`pro`を含む依頼を明示的に送ります。
 
 ```text
 proに相談して。このAPIの認証方式をJWTに変更すべきか判断したい。
+```
+
+```text
+proに調査してもらって。このライブラリの公式仕様と既知の制約を整理してほしい。
 ```
 
 ```text
@@ -96,7 +102,7 @@ proにこの設計をレビューしてもらって。特に障害時の復旧�
 実装前にproへ確認して。現在案と代替案のトレードオフを比較してほしい。
 ```
 
-通常の「レビューして」「設計を相談したい」といった依頼では自動起動しません。Proへ共有する内容に不足がある場合や、送信前のUIをCodexから確認できない場合は、Oracleを実行する前に確認を求めます。
+通常の「調査して」「レビューして」「設計を相談したい」といった依頼では自動起動しません。Proへ共有する内容に不足がある場合や、送信前のUIをAIエージェントから確認できない場合は、Oracleを実行する前に確認を求めます。
 
 相談中にChatGPTへ`Pro thinking`や`Answer now`が表示されても、`Answer now`は押さずに最終回答を待ちます。タイムアウトや接続断が起きた場合は、同じ相談を新規送信せず、既存のOracleセッションへ再接続します。
 
@@ -122,9 +128,7 @@ ChatGPTサーバー内部で実際に動作したモデルのattestationは取�
 Skillを変更した場合は、frontmatterと構造を検証します。
 
 ```bash
-uv run --with pyyaml python \
-  ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
-  skills/pro
+gh skill publish --dry-run
 git diff --check
 ```
 
