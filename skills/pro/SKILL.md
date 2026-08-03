@@ -1,33 +1,17 @@
 ---
 name: pro
-description: Consult GPT-5.6 Sol Pro through Oracle browser mode. Use when the user asks "proに相談して", "proに聞いて", "proに確認して", or requests an independent expert review.
+description: Consult GPT-5.6 Sol + Pro through Oracle browser mode as an independent senior architect and reviewer. Use only when the user explicitly invokes pro with requests such as "proに相談して", "proに聞いて", "proに確認して", or "proにレビューしてもらって". Do not trigger for ordinary reviews, design discussions, or second-opinion requests that do not explicitly name pro.
 ---
 
-# Pro Consultation Skill
+# Pro Consultation
 
-GPT-5.6 Sol Proへセカンドオピニオンを依頼するためのSkill。
-通常のAI実装・調査ではなく、重要な判断、設計レビュー、リスク確認、別視点が必要な場合に利用する。
+GPT-5.6 Sol + Proへ、設計、技術判断、リスクについて独立したセカンドオピニオンを依頼する。
 
-## Trigger
-
-以下のような依頼で使用する。
-
-- proに相談して
-- proに聞いて
-- proに確認して
-- Proにレビューしてもらって
-- 別の専門家視点で確認して
-- この判断が正しいか確認して
-
-## Role
-
-あなた自身が回答を作る前に、GPT-5.6 Sol Proへ相談する。
-ただし、現在の会話やリポジトリ全体をそのまま渡さない。
-Proへ渡す前に、現在のコンテキストから「判断に必要な情報」のみ整理する。
+Proを実装者として扱わない。実装、ファイル変更、外部への投稿、最終判断は現在のエージェントが担当する。
 
 ## Phase 1: Problem Extraction
 
-まず以下の形式で相談内容を整理する。
+現在の会話やリポジトリ全体を渡さず、判断に必要な情報だけを抽出する。確認済みの事実と現在のエージェントの見解を区別し、次の形式に整理する。
 
 ```text
 # Background
@@ -40,157 +24,214 @@ Proへ渡す前に、現在のコンテキストから「判断に必要な情�
 
 # Current Situation
 
-現在の状況。
+確認できている現在の状況と事実。
 
 # Current Approach
 
-現在考えている案。
+現在採用している案、または有力と考えている案。
 
 # Options
 
-検討している選択肢。
+比較対象となる選択肢。なければ「なし」とする。
+
+# Constraints
+
+技術、期限、予算、互換性、運用などの制約。
 
 # Concerns
 
-懸念している点。
+懸念、未知事項、見落としの可能性。
 
 # Decision Needed
 
-何を判断してほしいか。
+Proに判断またはレビューしてほしい論点。
 
 # Questions
 
-GPT-5.6 Sol Proへ確認したい質問。
+Proに答えてほしい具体的な質問。
 ```
 
-不要な情報は削除する。
-特に以下は除外する。
+判断に必要な場合だけ、関係するコードやdiffの最小範囲、エラーの該当部分、依存する仕様、比較に必要な数値を含める。
 
-- 関係ないファイル内容
-- 長いログ
-- 既に確定した情報
-- 判断に影響しない背景
+次の情報は除外する。
 
-## Phase 2: Pro Consultation
+- 関係ないファイルや会話履歴
+- 判断に影響しない長いログと重複情報
+- 秘密情報、認証情報、APIキー、顧客情報、個人情報
+- Proに先入観を与える断定的な誘導
 
-整理した内容のみOracleへ渡す。
+不足情報が結論を大きく変える場合は、Oracleを呼ぶ前に安全な範囲で確認する。確認できない情報は推測で埋めず、未確認事項として明記する。
 
-実行:
+## Phase 2: Preflight
+
+自動ダウンロードされる未固定コードを実行しない。ローカルにインストール済みのOracleと必要なbrowserオプションを確認する。
 
 ```bash
-npx -y @steipete/oracle \
-  --engine browser \
-  --browser-manual-login \
-  --browser-port 19194 \
-  --browser-reuse-wait 3s \
-  --browser-keep-browser \
-  --browser-model-strategy current \
-  --browser-timeout 20m \
-  --browser-auto-reattach-delay 5s \
-  --browser-auto-reattach-interval 3s \
-  --browser-auto-reattach-timeout 120s \
-  -p "<CONSULTATION_PROMPT>"
+command -v oracle
+oracle --version
+oracle --debug-help | rg -- '--browser-chrome-path|--browser-manual-login|--browser-keep-browser'
+oracle --help --verbose | rg -- '--browser-model-strategy'
 ```
 
-### Consultation Prompt
+Oracleが存在しない、または必要なオプションがない場合は実行を止める。`npx -y`で自動インストール・更新せず、未実施であることを報告する。
 
-Proには以下の役割を与える。
+macOSではGoogle Chromeを明示的に使用する。まず次の実行ファイルが存在することを確認する。
 
-```text
-あなたはシニアアーキテクト・技術レビュアーです。
-
-以下の相談内容をレビューしてください。
-
-単純に肯定するのではなく、
-以下を重点的に確認してください。
-
-1. 前提条件の誤り
-2. 見落としているリスク
-3. 採用しない方が良い理由
-4. より良い代替案
-5. 最終的な推奨判断
-
-技術的理由を含めて説明してください。
+```bash
+test -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 ```
 
-## Phase 3: Response
+存在しない場合は別のブラウザへ自動フォールバックせず、実行を止めてGoogle Chromeのパスを確認する。
 
-Proの回答をそのまま返すだけではなく、必要に応じて整理する。
+Oracle用Chromeが未起動または未ログインの場合だけ、Phase 3のコマンドを接続確認用の短いプロンプトへ置き換えて一度起動する。接続確認をProへの相談として扱わない。`--browser-keep-browser`でChromeを開いたままにする。
 
-出力形式:
+実際の相談を送信する直前に、Oracle用Google Chromeで次を目視確認する。
+
+1. Intelligenceメニューで `Pro` が選択されている。
+2. バージョンのサブメニューで `GPT-5.6 Sol` が選択されている。
+3. 重要な相談では、両方の選択が分かるスクリーンショットを保存する。
+
+片方でも確認できない、またはOracle用Chromeの画面へアクセスできない場合は、プロンプトを送信しない。必要ならユーザーに選択と確認を依頼する。
+
+`--browser-model-strategy current`は現在の選択を維持するだけであり、GPT-5.6 SolまたはProを選択・検証する指定ではない。
+
+## Phase 3: Oracle Consultation
+
+Phase 1の相談内容を、次の固定指示に続けて1つのプロンプトとして渡す。
 
 ```text
+あなたは独立したシニアアーキテクト・技術レビュアーです。
+実装者として作業せず、提示された判断材料を批判的にレビューしてください。
+
+次の観点を確認してください。
+
+1. 前提条件の誤りや未確認事項
+2. 見落としているリスクと運用影響
+3. 現在案を採用しない方がよい理由
+4. より良い代替案とトレードオフ
+5. 最終的な推奨判断とその根拠
+
+情報が不足して断定できない場合は、不足情報と条件分岐を明示してください。
+
+<PHASE_1_CONSULTATION>
+```
+
+組み立て済みの相談プロンプト全体を送信直前に再検査する。秘密情報、認証情報、APIキー、顧客情報、個人情報が残っている場合は削除・匿名化し、判断に必要な形へ直せない場合は送信を止める。
+
+Oracleをbrowser modeで実行する。`<UNIQUE_SESSION_SLUG>`には英数字とハイフンで一意な3〜5語の名前を指定する。
+
+相談プロンプトはshellへ直接展開しない。argv配列を渡せる実行手段があれば、プロンプト全体を1つのargvとして渡す。shellコマンドしか使えない場合は、プロンプト全体をPOSIXの単一引用符で囲み、内部の`'`を`'"'"'`へ置換する。二重引用符内へ未加工の相談内容を埋め込まない。
+
+```bash
+env -u OPENAI_API_KEY \
+  -u AZURE_OPENAI_API_KEY \
+  -u AZURE_API_KEY \
+  -u OPENROUTER_API_KEY \
+  -u ANTHROPIC_API_KEY \
+  -u GEMINI_API_KEY \
+  -u XAI_API_KEY \
+  -u CODEX_API_KEY \
+  oracle \
+    --engine browser \
+    --browser-manual-login \
+    --browser-chrome-path "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+    --browser-port 19194 \
+    --browser-reuse-wait 3s \
+    --browser-keep-browser \
+    --browser-model-strategy current \
+    --browser-timeout 20m \
+    --browser-auto-reattach-delay 5s \
+    --browser-auto-reattach-interval 3s \
+    --browser-auto-reattach-timeout 120s \
+    --verbose \
+    --slug "<UNIQUE_SESSION_SLUG>" \
+    -p '<SHELL_ESCAPED_FIXED_INSTRUCTIONS_AND_PHASE_1_CONSULTATION>'
+```
+
+ChatGPTに `Pro thinking` や `Answer now` が表示されても、`Answer now`を押さず最終回答まで待つ。
+
+タイムアウト、不完全取得、接続断が発生した場合は、同じ相談を再実行しない。セッションIDまたはslugを使って既存セッションへreattachする。
+
+```bash
+oracle session <SESSION_ID_OR_SLUG> --render
+```
+
+Oracleが利用できない場合もAPI modeやResponses APIへフォールバックしない。
+
+## Phase 4: Verification
+
+回答取得後に対象セッションを確認する。
+
+```bash
+oracle status
+```
+
+セッションメタデータを確認する。
+
+```bash
+jq '{
+  status,
+  mode,
+  elapsedMs,
+  chromePath: .browser.config.chromePath,
+  modelSelection: .browser.modelSelection,
+  conversationUrl: (.browser.archive.conversationUrl // .browser.runtime.tabUrl)
+}' ~/.oracle/sessions/<SESSION_ID_OR_SLUG>/meta.json
+```
+
+次をすべて満たした場合だけ、GPT-5.6 Sol + Proの送信時UIを確認して相談したと報告する。
+
+- `status`が`completed`
+- `mode`が`browser`
+- `chromePath`が`/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`
+- `conversationUrl`が`https://chatgpt.com/`のURL
+- `modelSelection.strategy`が`current`
+- 送信直前のUIで`GPT-5.6 Sol`と`Pro`の両方を確認済み
+- `Answer now`を押さず、最終回答を取得済み
+
+`current`実行で`verified=no`または`verified=false`となっても、Proではなかったという判定にはしない。ただしOracle自身によるモデル検証済みとも報告しない。起動ログのモデル名や回答速度、モデル自身の自己申告を選択証拠に使わない。
+
+ChatGPTサーバー内部で実行されたモデルのattestationは取得できない。この限界を必ず報告する。
+
+## Phase 5: Response
+
+Proの回答をそのまま転送せず、実際のコンテキストと根拠に照らして整理する。
+
+```text
+## 実行確認
+
+実行経路: ChatGPT browser / subscription
+ブラウザ: <chromePath>
+APIキー環境変数: コマンドに列挙したprovider keyをOracle子プロセスから解除
+送信時UI: <GPT-5.6 Sol + Proを確認済み、または未確認>
+Oracleセッション: <status> / <mode>
+Oracleモデル検証: <verifiedの値>
+サーバー側attestation: 取得不可
+
 ## Proの回答
 
-(Pro回答)
+回答の要点と結論。
+
+## 重要な指摘
+
+前提の誤り、重大なリスク、代替案、未確認事項。
 
 ## 自分の判断との比較
 
-必要なら違いを説明。
+一致点、相違点、Proの回答を受けて再評価した点。
 
 ## 推奨アクション
 
-次に行うべきこと。
+ユーザーが次に行うべき具体的な対応。
 ```
 
-## Rules
+実際にOracleから最終回答を取得していない場合は、Proへ相談したと表現しない。Proの回答を無条件に採用せず、事実誤認や現在の環境と合わない提案を明示し、最終判断は現在のエージェントが行う。
 
-- OpenAI APIは使用しない。
-- OPENAI_API_KEYは使用しない。
-- Responses APIへ送信しない。
-- Oracle browser modeのみ利用する。
-- ChatGPTブラウザで選択済みのGPT-5.6 Sol Proを利用する。
-- モデル変更操作はしない。
-- Proが別の判断をした場合、自分の判断を再評価する。
+## Prohibitions
 
-## Usage Examples
-
-```text
-# Architecture Review
-User:
-proに設計レビューして
-整理:
-Background:
-AWS ECS上でPHPアプリを運用。
-
-Current Approach:
-Aurora MySQL + Redis構成。
-
-Decision Needed:
-RDS Proxy導入判断。
-
-Questions:
-導入メリット・デメリットを確認したい。
-```
-
-```text
-# Decision Review
-User:
-proに聞いて、この2案どちらが良い？
-整理:
-Options:
-
-A:
-既存構成維持。
-
-B:
-新方式へ変更。
-
-Decision Needed:
-長期運用ではどちらを選ぶべきか。
-```
-
-```text
-# Code Review
-User:
-proに確認して、この変更大丈夫？
-整理:
-Change:
-認証処理変更。
-
-Risk:
-セキュリティ影響確認。
-
-Questions:
-見落としている脆弱性がないか。
-```
+- OpenAI API、Responses API、API modeを使用しない。
+- `--model gpt-5.6-sol-pro`を使用しない。
+- `--reasoning-mode pro`をbrowser modeの代わりに使用しない。
+- `--browser-thinking-time heavy`をPro選択の証拠に使用しない。
+- Oracle失敗時に別の有料APIへフォールバックしない。
+- Proへ実装、ファイル変更、外部投稿を依頼しない。
