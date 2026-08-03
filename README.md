@@ -1,6 +1,6 @@
 # pro
 
-CodexからGPT-5.6 Sol + Proへ、設計や技術判断のセカンドオピニオンを依頼するためのSkillです。OpenAI APIではなく、Oracleのbrowser modeとChatGPT subscriptionを使用します。
+CodexからGPT-5.6 Sol + Proへ、設計や技術判断のセカンドオピニオンを依頼するためのSkillです。OpenAI APIではなく、[Oracle](https://github.com/steipete/oracle)のbrowser modeとChatGPT subscriptionを使用します。
 
 このSkillは、ユーザーが「proに相談して」「proにレビューしてもらって」のように明示した場合だけ起動します。Proは独立したシニアアーキテクト・レビュアーとして意見を返し、実装と最終判断はCodexが担当します。
 
