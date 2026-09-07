@@ -1,11 +1,11 @@
 ---
 name: pro
-description: Consult GPT-5.6 Sol + Pro through Oracle browser mode as an independent senior researcher, architect, and reviewer. Use only when the user explicitly invokes pro with requests such as "proに相談して", "proに調査してもらって", "proに聞いて", "proに確認して", or "proにレビューしてもらって". Do not trigger for ordinary research, reviews, design discussions, or second-opinion requests that do not explicitly name pro.
+description: Consult ChatGPT GPT-6 Pro (the "latest 6 pro" UI option) through Oracle browser mode as an independent senior researcher, architect, and reviewer. Use only when the user explicitly invokes pro with requests such as "proに相談して", "proに調査してもらって", "proに聞いて", "proに確認して", or "proにレビューしてもらって". Do not trigger for ordinary research, reviews, design discussions, or second-opinion requests that do not explicitly name pro.
 ---
 
 # Pro Consultation
 
-GPT-5.6 Sol + Proへ、技術調査、設計、技術判断、リスクについて独立した調査結果とセカンドオピニオンを依頼する。
+ChatGPTの `latest 6 pro` を選んで、GPT-6 Proへ技術調査、設計、技術判断、リスクについて独立した調査結果とセカンドオピニオンを依頼する。
 
 Proを実装者として扱わない。実装、ファイル変更、外部への投稿、最終判断は現在のエージェントが担当する。
 
@@ -90,13 +90,13 @@ Oracle用Chromeが未起動または未ログインの場合だけ、Phase 3の�
 
 実際の相談を送信する直前に、Oracle用Google Chromeで次を目視確認する。
 
-1. Intelligenceメニューで `Pro` が選択されている。
-2. バージョンのサブメニューで `GPT-5.6 Sol` が選択されている。
-3. 重要な相談では、両方の選択が分かるスクリーンショットを保存する。
+1. モデル選択で `latest 6 pro` を優先して選ぶ（ユーザー指定のChatGPT UI選択肢）。同じ意味の表示でも、世代 `6` とモード `Pro` の両方を確認する。
+2. メニューを閉じた後も、その相談を送るOracle用Chromeの会話で選択が保持されていることを確認する。モデルとモードが別メニューのUIでは、それぞれ `GPT-6` と `Pro` を確認する。通常のブラウザーでの選択だけをOracle用Chromeの確認の代わりにしない。
+3. 実際のUI表示を記録し、重要な相談では選択が分かるスクリーンショットを保存する。`Latest`だけの表示、Oracleのログ名、通常のGPT-6やThinkingの選択だけではGPT-6 Proの確認にならない。
 
-片方でも確認できない、またはOracle用Chromeの画面へアクセスできない場合は、プロンプトを送信しない。必要ならユーザーに選択と確認を依頼する。
+世代6とProの両方を確認できない、指定の選択肢がなくなった、またはOracle用Chromeの画面へアクセスできない場合は、相談プロンプトを送信しない。利用可能なUI操作で指定の選択を試し、不足する操作・ログイン・選択の確認だけユーザーへ依頼する。別世代や別モードへ自動で変更しない。
 
-`--browser-model-strategy current`は現在の選択を維持するだけであり、GPT-5.6 SolまたはProを選択・検証する指定ではない。
+`--browser-model-strategy current`は現在の選択を維持するだけであり、GPT-6またはProを選択・検証する指定ではない。
 
 ## Phase 3: Oracle Consultation
 
@@ -182,14 +182,14 @@ jq '{
 }' ~/.oracle/sessions/<SESSION_ID_OR_SLUG>/meta.json
 ```
 
-次をすべて満たした場合だけ、GPT-5.6 Sol + Proの送信時UIを確認して相談したと報告する。
+次をすべて満たした場合だけ、GPT-6 Proの送信時UIを確認して相談したと報告する。
 
 - `status`が`completed`
 - `mode`が`browser`
 - `chromePath`が`/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`
 - `conversationUrl`が`https://chatgpt.com/`のURL
 - `modelSelection.strategy`が`current`
-- 送信直前のUIで`GPT-5.6 Sol`と`Pro`の両方を確認済み
+- 送信直前のOracle用ChromeのUIで`latest 6 pro`、または世代`6`と`Pro`の両方を確認し、実際の表示を記録済み
 - `Answer now`を押さず、最終回答を取得済み
 
 `current`実行で`verified=no`または`verified=false`となっても、Proではなかったという判定にはしない。ただしOracle自身によるモデル検証済みとも報告しない。起動ログのモデル名や回答速度、モデル自身の自己申告を選択証拠に使わない。
@@ -206,7 +206,7 @@ Proの調査結果や回答をそのまま転送せず、実際のコンテキ�
 実行経路: ChatGPT browser / subscription
 ブラウザ: <chromePath>
 APIキー環境変数: コマンドに列挙したprovider keyをOracle子プロセスから解除
-送信時UI: <GPT-5.6 Sol + Proを確認済み、または未確認>
+送信時UI: <実際に確認したlatest 6 pro等の表示、または未確認>
 Oracleセッション: <status> / <mode>
 Oracleモデル検証: <verifiedの値>
 サーバー側attestation: 取得不可
@@ -233,7 +233,7 @@ Oracleモデル検証: <verifiedの値>
 ## Prohibitions
 
 - OpenAI API、Responses API、API modeを使用しない。
-- `--model gpt-5.6-sol-pro`を使用しない。
+- API用の`--model`指定をChatGPT UIの`latest 6 pro`選択の代わりに使用しない。
 - `--reasoning-mode pro`をbrowser modeの代わりに使用しない。
 - `--browser-thinking-time heavy`をPro選択の証拠に使用しない。
 - Oracle失敗時に別の有料APIへフォールバックしない。
